@@ -28,7 +28,7 @@ class TipEnhancement:
 
         ln_term = math.log(2 * h / r) if (2 * h / r) > 1 else 1.0
         E_tip_analytic = voltage_V / (r * ln_term)
-        E_tip_corrected = E_tip_analytic * 0.8
+        E_tip_corrected = E_tip_analytic
         E_avg = voltage_V / h
         beta = E_tip_analytic / E_avg if E_avg > 0 else 0.0
         E_onset = PEEK_A * (1 + PEEK_B / math.sqrt(r))
@@ -36,6 +36,25 @@ class TipEnhancement:
         d_10pct = r * 10
         d_1pct = r * 100
         ratio = E_tip_corrected / E_BREAK_STP
+
+        # ===== DEBUG BLOCK (add this) =====
+        print("\n--- DEBUG: hyperboloid_tip ---")
+        print(f"Input Voltage: {voltage_V} V")
+        print(f"Tip radius (m): {r}")
+        print(f"Emitter length (m): {h}")
+        print(f"ln term: {ln_term}")
+
+        print(f"E_tip_analytic: {E_tip_analytic:.3e}")
+        print(f"E_tip_corrected: {E_tip_corrected:.3e}")
+        print(f"E_avg: {E_avg:.3e}")
+        print(f"beta (enhancement): {beta:.2f}")
+
+        print(f"E_onset: {E_onset:.3e}")
+        print(f"V_onset: {V_onset:.2f}")
+
+        print(f"Breakdown ratio (E_tip / E_break): {ratio:.2f}")
+        print("--------------------------------\n")
+        # ===== END DEBUG =====
 
         return {
             "physics_outputs": {
@@ -157,8 +176,8 @@ class FieldSolver2D:
               emitter_radius_mm: float,
               collector_inner_mm: float,
               emitter_length_mm: float = 20.0,
-              housing_radius_mm: float = 50.0,
-              rho_e: float = 0.0,
+              housing_radius_mm: float = 20.0,
+              rho_e: float = 1e-6,
               max_iter: int = 2000,
               tol: float = 1e-4) -> dict:
         gap = gap_mm / 1000
@@ -263,6 +282,15 @@ class FieldSolver2D:
 
         E_peak = max(Emag[i][j] for i in range(self.Nr) for j in range(self.Nz))
 
+        # ===== DEBUG BLOCK =====
+        print("\n--- DEBUG: Numerical Solver ---")
+        print(f"E_peak (numerical): {E_peak:.3e} V/m")
+        print(f"E_avg (expected): {(voltage_V / gap):.3e} V/m")
+        print(f"Enhancement factor: {E_peak / (voltage_V / gap):.2f}")
+        print("--------------------------------\n")
+        # ===== END DEBUG =====
+
+                
         axis_profile = []
         for j in range(0, self.Nz, max(1, self.Nz // 20)):
             axis_profile.append({
@@ -354,7 +382,7 @@ class FieldAnalysis:
                           emitter_radius_mm: float,
                           collector_inner_mm: float,
                           emitter_length_mm: float = 20.0) -> dict:
-        solver = FieldSolver2D(Nr=30, Nz=45, omega=1.7)
+        solver = FieldSolver2D(Nr=100, Nz=200, omega=1.7)
         numerical = solver.solve(
             voltage_V=voltage_V,
             gap_mm=gap_mm,
